@@ -1,0 +1,51 @@
+{
+    "service.name": "external-service-adapter",
+    "Environment": "dev",
+    "server.port": ":8080",
+    "log.level": "info",
+    "aws.region": "ap-south-1",
+    "X-Api-Key": "REPLACE_ME_API_KEY",
+    "cache-api-key": "REPLACE_ME_CACHE_API_KEY",
+    "EnableAuth": false,
+    "JwksAudience": "your-audience-value",
+    "JwksIssuer": "your-issuer-value",
+    "JwksUrl": "https://your-jwks-endpoint",
+    "DMIBaseUrl": "http://localhost:8080",
+    "database.dialect": "postgres",
+    "database.username": "postgres",
+    "database.password": "postgres",
+    "database.host": "localhost",
+    "database.port": "5432",
+    "database.name": "external-service-adapter",
+    "database.maxIdleConnections": 10,
+    "database.maxOpenConnections": 100,
+    "database.connMaxLifetimeInHours": 1,
+    "database.shouldRunAutoMigrations": true,
+    "database.shouldRunGooseMigrations": true,
+    
+    "mongo": {
+      "connectionString": "mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.5.0",
+      "username": "",
+      "password": "",
+      "host": "127.0.0.1:27017",
+      "minPoolSize": 5,
+      "maxPoolSize": 10,
+      "maxConnIdleTimeInMs": 60000,
+      "dbName": "audit-log",
+      "collections": {
+        "esaLog": "esa-log"
+      }
+    },
+
+    "salesforce": {
+      "clientId": "REPLACE_ME_CLIENT_ID",
+      "clientSecret": "REPLACE_ME_CLIENT_SECRET",
+      "authEndpoint": "https://test.salesforce.com/services/oauth2/authorize",
+      "tokenEndpoint": "https://test.salesforce.com/services/oauth2/token",
+      "baseURL": "https://yourdomain.sandbox.my.salesforce.com",
+      "loginURL": "https://yourdomain.sandbox.my.salesforce.com",
+      "username": "user@example.com",
+      "password": "REPLACE_ME_PASSWORD",
+      "securityToken": "REPLACE_ME_SECURITY_TOKEN"
+    }
+  }

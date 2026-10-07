@@ -1,0 +1,152 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: external-service-adapter
+  namespace: preonboarding  # Update for your environment
+  labels:
+    app: external-service-adapter
+    environment: production
+spec:
+#  replicas: 1
+  selector:
+    matchLabels:
+      app: external-service-adapter
+  template:
+    metadata:
+      labels:
+        app: external-service-adapter
+        environment: production
+    spec:
+      # Allow 60s for graceful shutdown (SIGTERM → drain HTTP, async log queue, Mongo) before SIGKILL
+      terminationGracePeriodSeconds: 90
+      serviceAccountName: secret-sa
+      nodeSelector:
+        node-type: preonboarding-node
+      tolerations:
+        - key: "workload"
+          value: "preonboarding"
+          effect: "NoSchedule"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-type
+                    operator: In
+                    values:
+                      - preonboarding-node
+      containers:
+      - name: external-service-adapter
+        image: <IMAGE>
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: TZ
+          value: "Asia/Kolkata"
+        - name: ENVIRONMENT
+          value: "production"  # or dev, production
+        - name: CONFIG_MODE
+          value: "kubernetes"
+        # Memory-based concurrency: set to container limit (1000Mi) so ESA can cap max_concurrent_sequence_requests from memory
+        - name: MEMORY_LIMIT_BYTES
+          value: "1048576000"  # 1000Mi, must match resources.limits.memory
+        # Go runtime: soft heap limit to reduce OOM risk (leave headroom for stacks, runtime; ~90% of 1000Mi)
+        - name: GOMEMLIMIT
+          value: "900MiB"
+        - name: ENABLE_AWS_SECRETS
+          value: "true"
+        - name: AWS_REGION
+          value: "ap-south-1"
+        - name: SECRET_MANAGER_PREFIX
+          value: "dm-esa"
+
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/config
+          readOnly: true
+        # Certificate volume mounts (Production-ready with Secrets)
+        - name: cibil-client-cert-volume
+          mountPath: /app/certs/client
+          readOnly: true
+        - name: cibil-private-key-volume
+          mountPath: /app/certs/private
+          readOnly: true
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "1000Mi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: external-service-adapter/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: external-service-adapter/ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: config-volume
+        configMap:
+          name: external-service-adapter-config
+      # Certificate volumes using Secrets (Production-ready)
+      - name: cibil-client-cert-volume
+        secret:
+          secretName: cibil-client-cert-secret
+          defaultMode: 0444
+          items:
+          - key: tls.crt
+            path: tls.crt
+      - name: cibil-private-key-volume
+        secret:
+          secretName: cibil-private-key-secret
+          defaultMode: 0444
+          items:
+          - key: tls.key
+            path: tls.key
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: external-service-adapter-hpa
+  namespace: preonboarding
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: external-service-adapter
+  minReplicas: 2
+  maxReplicas: 7
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: external-service-adapter-service
+  namespace: preonboarding
+spec:
+  selector:
+    app: external-service-adapter
+  ports:
+  - protocol: TCP
+    port: 8081
+    targetPort: 8080
+  type: ClusterIP

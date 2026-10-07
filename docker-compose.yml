@@ -1,0 +1,165 @@
+version: '3.8'
+
+services:
+  # External Service Adapter
+  external-service-adapter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: esa-app
+    ports:
+      - "8080:8080"
+    environment:
+      - GIN_MODE=release
+      - CONFIG_PATH=/app/configs
+      - DATABASE_HOST=postgres
+      - REDIS_HOST=redis
+      - MONGODB_URI=mongodb://mongodb:27017
+    depends_on:
+      - postgres
+      - redis
+      - mongodb
+    networks:
+      - esa-network
+    volumes:
+      - ./configs:/app/configs:ro
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: esa-postgres
+    environment:
+      POSTGRES_DB: esa_dev
+      POSTGRES_USER: esa_user
+      POSTGRES_PASSWORD: dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./deployments/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - esa-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U esa_user -d esa_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: esa-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./deployments/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - esa-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # MongoDB for Logs
+  mongodb:
+    image: mongo:6.0
+    container_name: esa-mongodb
+    environment:
+      MONGO_INITDB_DATABASE: esa_dev
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./deployments/mongodb/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - esa-network
+    restart: unless-stopped
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/esa_dev --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  # Redis Commander (Optional - for Redis management)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: esa-redis-commander
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - esa-network
+    restart: unless-stopped
+    profiles:
+      - tools
+
+  # PgAdmin (Optional - for PostgreSQL management)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: esa-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8082:80"
+    depends_on:
+      - postgres
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - esa-network
+    restart: unless-stopped
+    profiles:
+      - tools
+
+  # Mongo Express (Optional - for MongoDB management)
+  mongo-express:
+    image: mongo-express:latest
+    container_name: esa-mongo-express
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongodb
+      ME_CONFIG_MONGODB_PORT: 27017
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: admin
+    ports:
+      - "8083:8081"
+    depends_on:
+      - mongodb
+    networks:
+      - esa-network
+    restart: unless-stopped
+    profiles:
+      - tools
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  mongodb_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  esa-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16 

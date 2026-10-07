@@ -1,0 +1,31 @@
+# STAGING ONLY. Staging has no HPA (deployment.yml sets replicas: 2). For the burst test (T5)
+# only, mirror production's HPA (min 2, max 7, CPU and memory at 70% of requests) so the
+# scale-out reaction can be observed. Delete it after T5 so manual replica counts work again.
+#
+# kubectl apply  -n staging -f staging-hpa.yaml
+# kubectl delete -n staging -f staging-hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata: { name: decision-manager-uat-hpa, namespace: staging, labels: { purpose: loadtest } }
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: decision-manager-uat }
+  minReplicas: 2
+  maxReplicas: 7
+  metrics:
+    - type: Resource
+      resource: { name: cpu, target: { type: Utilization, averageUtilization: 70 } }
+    - type: Resource
+      resource: { name: memory, target: { type: Utilization, averageUtilization: 70 } }
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata: { name: external-service-adapter-uat-hpa, namespace: staging, labels: { purpose: loadtest } }
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: external-service-adapter-uat }
+  minReplicas: 2
+  maxReplicas: 7
+  metrics:
+    - type: Resource
+      resource: { name: cpu, target: { type: Utilization, averageUtilization: 70 } }
+    - type: Resource
+      resource: { name: memory, target: { type: Utilization, averageUtilization: 70 } }

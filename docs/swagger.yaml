@@ -1,0 +1,130 @@
+definitions:
+  common_dto.MasterDTO:
+    properties:
+      data:
+        additionalProperties:
+          additionalProperties: true
+          type: object
+        type: object
+      sequenceArray:
+        items:
+          items:
+            type: integer
+          type: array
+        type: array
+      services:
+        items:
+          $ref: '#/definitions/common_dto.Service'
+        type: array
+    type: object
+  common_dto.Service:
+    properties:
+      api_url:
+        type: string
+      endTime:
+        type: string
+      headers:
+        additionalProperties:
+          type: string
+        type: object
+      id:
+        type: integer
+      request_body:
+        additionalProperties: true
+        type: object
+      request_method:
+        type: string
+      responseBody:
+        additionalProperties: true
+        type: object
+      send_response:
+        type: boolean
+      service_name:
+        type: string
+      startTime:
+        type: string
+      status:
+        type: string
+      time:
+        type: integer
+    type: object
+  esa_request_dto.ProcessSequenceRequest:
+    properties:
+      applicationId:
+        example: APP123456
+        type: string
+      customerId:
+        example: CUST123456
+        type: string
+      partnerName:
+        example: Samsung
+        type: string
+      programType:
+        example: Personal Loan
+        type: string
+      sequenceId:
+        example: SEQ123456
+        type: string
+      sequenceString:
+        example: '{1,2;5}'
+        type: string
+      workflowId:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+    required:
+    - applicationId
+    - customerId
+    - partnerName
+    - programType
+    - sequenceId
+    - sequenceString
+    - workflowId
+    type: object
+info:
+  contact: {}
+paths:
+
+
+  /external-service-adapter/v1/process-sequence/v2:
+    post:
+      consumes:
+      - application/json
+      description: Process a sequence of service calls with enhanced response structure
+      parameters:
+      - description: Process sequence request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/esa_request_dto.ProcessSequenceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common_dto.MasterDTO'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Process sequence v2
+      tags:
+      - ESA
+swagger: "2.0"

@@ -1,0 +1,205 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "contact": {}
+    },
+    "paths": {
+
+
+        "/external-service-adapter/v1/process-sequence/v2": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Process a sequence of service calls with enhanced response structure",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ESA"
+                ],
+                "summary": "Process sequence v2",
+                "parameters": [
+                    {
+                        "description": "Process sequence request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/esa_request_dto.ProcessSequenceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common_dto.MasterDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "common_dto.MasterDTO": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "object",
+                        "additionalProperties": true
+                    }
+                },
+                "sequenceArray": {
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "services": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/common_dto.Service"
+                    }
+                }
+            }
+        },
+        "common_dto.Service": {
+            "type": "object",
+            "properties": {
+                "api_url": {
+                    "type": "string"
+                },
+                "endTime": {
+                    "type": "string"
+                },
+                "headers": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "request_body": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "request_method": {
+                    "type": "string"
+                },
+                "responseBody": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "send_response": {
+                    "type": "boolean"
+                },
+                "service_name": {
+                    "type": "string"
+                },
+                "startTime": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "time": {
+                    "type": "integer"
+                }
+            }
+        },
+        "esa_request_dto.ProcessSequenceRequest": {
+            "type": "object",
+            "required": [
+                "applicationId",
+                "customerId",
+                "partnerName",
+                "sequenceId",
+                "sequenceString",
+                "stage"
+            ],
+            "properties": {
+                "applicationId": {
+                    "type": "string",
+                    "example": "APP123456"
+                },
+                "customerId": {
+                    "type": "string",
+                    "example": "CUST123456"
+                },
+                "partnerName": {
+                    "type": "string",
+                    "example": "Samsung"
+                },
+                "programType": {
+                    "type": "string",
+                    "example": "Personal Loan"
+                },
+                "Sales_Channel_Partner_Name__c": {
+                    "type": "string"
+                },
+                "Sourcing_Channel__c": {
+                    "type": "string"
+                },
+                "Name_of_Consolidator__c": {
+                    "type": "string"
+                },
+                "sequenceId": {
+                    "type": "string",
+                    "example": "SEQ123456"
+                },
+                "sequenceString": {
+                    "type": "string",
+                    "example": "{1,2;5}"
+                },
+                "stage": {
+                    "type": "string",
+                    "example": "Decision"
+                },
+                "workflowId": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                }
+            }
+        }
+    }
+}

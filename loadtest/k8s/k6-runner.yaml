@@ -1,0 +1,50 @@
+# STAGING ONLY. Runs k6 inside the staging cluster, so the load generator, the VPN and your
+# laptop's network are not the bottleneck, and requests hit the ClusterIP services directly.
+#
+# 1) Load the scripts:
+#    kubectl -n staging create configmap k6-scripts \
+#      --from-file=../k6/lib.js --from-file=../k6/dm_trigger.js --from-file=../k6/esa_sequence.js \
+#      --dry-run=client -o yaml | kubectl apply -f -
+# 2) Store keys (never put them in this file):
+#    kubectl -n staging create secret generic k6-keys \
+#      --from-literal=DM_API_KEY='<staging Dm_Api_Key>' --from-literal=ESA_API_KEY='<staging EsaApiKey>'
+# 3) Edit the env block below for the run, then:
+#    kubectl -n staging delete pod k6-run --ignore-not-found && kubectl -n staging apply -f k6-runner.yaml
+#    kubectl -n staging logs -f k6-run          # summary is printed at the end
+apiVersion: v1
+kind: Pod
+metadata:
+  name: k6-run
+  namespace: staging
+  labels: { purpose: loadtest }
+spec:
+  restartPolicy: Never
+  containers:
+    - name: k6
+      image: grafana/k6:2.3.0
+      args: ["run", "/scripts/dm_trigger.js"]        # or /scripts/esa_sequence.js
+      env:
+        - { name: K6_NO_USAGE_REPORT, value: "true" }
+        - { name: RESULTS_DIR, value: "/tmp" }
+        - { name: PROFILE, value: "ramp" }            # smoke | ramp | steady | burst
+        - { name: MODE, value: "sync" }               # sync | async (DM only)
+        - { name: STAGES, value: "1:2m,1:2m,2:3m,4:3m,6:3m,8:3m,12:3m,16:3m,24:3m" }
+        - { name: RATE, value: "4" }
+        - { name: DURATION, value: "15m" }
+        - { name: MAX_VUS, value: "800" }
+        - { name: PARTNER, value: "LOADTEST_PARTNER" }
+        - { name: STAGE, value: "loadtest" }
+        - { name: LEAD_IDS, value: "<comma-separated staging lead ids>" }
+        # ESA direct only:
+        - { name: SEQUENCE_ID, value: "<partner_service_mapping.id>" }
+        - { name: SEQUENCE_STRING, value: "<service_sequence_string>" }
+        - name: API_KEY
+          valueFrom: { secretKeyRef: { name: k6-keys, key: DM_API_KEY } }   # ESA_API_KEY for esa_sequence.js
+      volumeMounts:
+        - { name: scripts, mountPath: /scripts }
+      resources:
+        requests: { cpu: "1", memory: 512Mi }
+        limits: { cpu: "2", memory: 1Gi }
+  volumes:
+    - name: scripts
+      configMap: { name: k6-scripts }
